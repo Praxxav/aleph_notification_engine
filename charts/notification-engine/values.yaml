@@ -1,0 +1,79 @@
+# Default values for the Aleph Notification Engine
+
+environment: dev
+
+image:
+  repository: acralephdev.azurecr.io/notifications
+  tag: latest
+  pullPolicy: IfNotPresent
+
+keyvault:
+  name: ""
+  tenantId: ""
+
+queue:
+  backend: storage
+  accountUrl: ""
+  name: notifications
+
+# General Pod Security Context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+
+# Container Security Context (Strict Security)
+securityContext:
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+api:
+  replicaCount: 2
+  managedIdentityClientId: ""
+  port: 8000
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+worker:
+  replicaCount: 1
+  managedIdentityClientId: ""
+  terminationGracePeriodSeconds: 30
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+  # KEDA-based queue-depth autoscaling parameters
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    queueLength: 5  # Scale workers up by 1 per 5 messages in backlog
+
+ingress:
+  enabled: true
+  className: nginx
+  host: notifications.aleph.tech
+  tls:
+    enabled: false
+    secretName: notifications-tls

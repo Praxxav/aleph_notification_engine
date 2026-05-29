@@ -1,0 +1,94 @@
+name: Deploy to Prod
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  id-token: write    # Required for OIDC login
+  contents: read
+
+jobs:
+  deploy-prod:
+    name: Deploy Production Environment
+    runs-on: ubuntu-latest
+    # Enforces manual approval gate configured inside the GitHub Environment
+    environment: production
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Extract Tag Version
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "v3.12.0"
+
+      # Authenticate to Azure using OIDC Federated Credentials (Zero Static Secrets)
+      - name: Azure OIDC Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # 1. Provision / Sync Production Infrastructure via Terraform
+      - name: Terraform Init
+        run: terraform init
+        working-directory: terraform/environments/prod
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+        working-directory: terraform/environments/prod
+
+      # 2. Extract Production Terraform Outputs dynamically
+      - name: Extract Terraform Outputs
+        id: tf_outputs
+        run: |
+          cd terraform/environments/prod
+          echo "ACR_SERVER=$(terraform output -raw acr_login_server)" >> $GITHUB_OUTPUT
+          echo "KV_NAME=$(terraform output -raw key_vault_name)" >> $GITHUB_OUTPUT
+          echo "QUEUE_URL=$(terraform output -raw queue_account_url)" >> $GITHUB_OUTPUT
+          echo "API_CLIENT_ID=$(terraform output -raw api_managed_identity_client_id)" >> $GITHUB_OUTPUT
+          echo "WORKER_CLIENT_ID=$(terraform output -raw worker_managed_identity_client_id)" >> $GITHUB_OUTPUT
+          echo "AKS_CLUSTER=$(terraform output -raw aks_cluster_name)" >> $GITHUB_OUTPUT
+          echo "RESOURCE_GROUP=$(terraform output -raw resource_group_name)" >> $GITHUB_OUTPUT
+
+      # 3. Log into ACR & Build and Push Production Release-Tagged Container Image
+      - name: Log in to ACR
+        run: |
+          az acr login --name ${{ steps.tf_outputs.outputs.ACR_SERVER }}
+
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t ${{ steps.tf_outputs.outputs.ACR_SERVER }}/notifications:${{ steps.get_version.outputs.VERSION }} -t ${{ steps.tf_outputs.outputs.ACR_SERVER }}/notifications:latest ./starter_app
+          docker push ${{ steps.tf_outputs.outputs.ACR_SERVER }}/notifications:${{ steps.get_version.outputs.VERSION }}
+          docker push ${{ steps.tf_outputs.outputs.ACR_SERVER }}/notifications:latest
+
+      # 4. Connect to Production AKS and Deploy Helm Chart
+      - name: Get AKS Kubeconfig
+        run: |
+          az aks get-credentials --resource-group ${{ steps.tf_outputs.outputs.RESOURCE_GROUP }} --name ${{ steps.tf_outputs.outputs.AKS_CLUSTER }} --overwrite-existing
+
+      - name: Helm Upgrade Rollout
+        run: |
+          helm upgrade --install notification-engine charts/notification-engine \
+            -f charts/notification-engine/values-prod.yaml \
+            --set image.repository=${{ steps.tf_outputs.outputs.ACR_SERVER }}/notifications \
+            --set image.tag=${{ steps.get_version.outputs.VERSION }} \
+            --set keyvault.name=${{ steps.tf_outputs.outputs.KV_NAME }} \
+            --set keyvault.tenantId=${{ secrets.AZURE_TENANT_ID }} \
+            --set queue.accountUrl=${{ steps.tf_outputs.outputs.QUEUE_URL }} \
+            --set api.managedIdentityClientId=${{ steps.tf_outputs.outputs.API_CLIENT_ID }} \
+            --set worker.managedIdentityClientId=${{ steps.tf_outputs.outputs.WORKER_CLIENT_ID }} \
+            --cleanup-on-fail

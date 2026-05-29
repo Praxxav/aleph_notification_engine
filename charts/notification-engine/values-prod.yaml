@@ -1,0 +1,28 @@
+# Production environment overrides
+environment: prod
+
+image:
+  pullPolicy: IfNotPresent
+
+api:
+  replicaCount: 3
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+
+worker:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+
+ingress:
+  host: notifications.aleph.tech

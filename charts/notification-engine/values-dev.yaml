@@ -1,0 +1,28 @@
+# Dev environment overrides
+environment: dev
+
+image:
+  pullPolicy: Always
+
+api:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+worker:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+ingress:
+  host: notifications.dev.aleph.tech

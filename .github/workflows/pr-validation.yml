@@ -1,0 +1,106 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'starter_app/**'
+      - 'terraform/**'
+      - 'charts/**'
+      - '.github/workflows/pr-validation.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # Job 1: Run Python Application tests with a PostgreSQL service container
+  app-tests:
+    name: Application Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: notifications_test
+        ports:
+          - 5432:5432
+        # Wait for PostgreSQL to be healthy
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r starter_app/requirements.txt pytest httpx fastapi
+
+      - name: Run Pytest
+        env:
+          APP_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/notifications_test
+          QUEUE_BACKEND: memory
+        run: |
+          cd starter_app
+          pytest tests/
+
+  # Job 2: Format and Validate Terraform Configurations
+  terraform-checks:
+    name: Terraform Format & Validate
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env: [dev, prod]
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        working-directory: terraform
+
+      - name: Terraform Init
+        run: terraform init -backend=false
+        working-directory: terraform/environments/${{ matrix.env }}
+
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: terraform/environments/${{ matrix.env }}
+
+  # Job 3: Lint the Helm Chart
+  helm-checks:
+    name: Helm Lint & Validate
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "v3.12.0"
+
+      - name: Helm Lint
+        run: helm lint charts/notification-engine

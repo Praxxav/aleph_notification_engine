@@ -9,6 +9,10 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.5.0"
     }
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.9.0"
+    }
   }
 
   # Natively supports workspaces. Terraform will save state files as:
@@ -16,7 +20,7 @@ terraform {
   # - env:/prod/notifications.tfstate
   backend "azurerm" {
     resource_group_name  = "rg-aleph-tfstate"
-    storage_account_name = "praxavtfstate12345"
+    storage_account_name = "stalephsdevtfstate"
     container_name       = "tfstate"
     key                  = "notifications.tfstate"
   }
@@ -24,4 +28,5 @@ terraform {
 
 provider "azurerm" {
   features {}
+  storage_use_azuread = true
 }

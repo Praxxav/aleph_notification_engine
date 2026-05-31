@@ -1,5 +1,6 @@
 output "key_vault_id" {
   value       = azurerm_key_vault.kv.id
+  depends_on  = [time_sleep.wait_for_rbac]
   description = "The ID of the Key Vault."
 }
 

@@ -22,3 +22,9 @@ resource "azurerm_role_assignment" "deployer_kv_admin" {
   role_definition_name = "Key Vault Administrator"
   principal_id         = data.azurerm_client_config.current.object_id
 }
+
+# Wait 30 seconds for the role assignment to propagate globally in Azure AD
+resource "time_sleep" "wait_for_rbac" {
+  depends_on      = [azurerm_role_assignment.deployer_kv_admin]
+  create_duration = "30s"
+}

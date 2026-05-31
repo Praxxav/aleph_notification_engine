@@ -217,10 +217,13 @@ az storage container create --account-name $STORAGE_PROD --name $CONTAINER
 Deployments are handled automatically by GitHub Actions, but they can be triggered manually:
 
 ```bash
-cd terraform/environments/dev # or prod
+cd terraform
 
 # Initialize backend
 terraform init
+
+# Create and/or select the workspace environment (e.g. dev or prod)
+terraform workspace select dev || terraform workspace new dev
 
 # Generate plan
 terraform plan
@@ -259,9 +262,9 @@ helm upgrade --install notification-engine charts/notification-engine \
 - **Decision:** A custom Python migrations runner executed via a Kubernetes Job before deployment.
 - **Justification:** In-container `CREATE TABLE IF NOT EXISTS` triggers race conditions when scaling up multiple API replicas concurrently. A dedicated Kubernetes Job running as a Helm Hook (`pre-install, pre-upgrade`) ensures migrations complete *before* any pod rollout. If a migration fails, the Job fails, blocking the release in CI/CD before breaking live applications.
 
-### Choice 4: Multi-Environment Layout — Directory Separation
-- **Decision:** Use a separate directory structure for `terraform/environments/dev` and `prod` rather than Terraform workspaces.
-- **Justification:** Directory separation provides the highest level of isolation for multi-environment IaC. Workspaces run the risk of accidental state deletion or environment mix-ups during manual executes. Directory separation enforces isolated state backends, unique configuration variables, and custom network topologies (CIDRs `10.10.0.0/16` vs. `10.20.0.0/16`) for absolute safety.
+### Choice 4: Multi-Environment Layout — Terraform Workspaces
+- **Decision:** Selected native **Terraform Workspaces** over directory-separated configurations.
+- **Justification:** Workspaces provide a completely DRY (Don't Repeat Yourself) infrastructure setup. Instead of copy-pasting code blocks across environment subdirectories, all environment orchestration is consolidated into a single root directory. Variable overrides (isolated subnet IP boundaries, AKS nodes, VM specs, and namespaces) are loaded dynamically from a configuration lookup map inside `locals.tf` using the active workspace parameter `terraform.workspace`. The `azurerm` backend natively handles state isolation inside standard `env:/dev/` and `env:/prod/` Blob directories, making this a highly elegant and advanced pattern.
 
 ### Choice 5: Ingress Controller — NGINX Ingress Controller
 - **Decision:** Standard NGINX Ingress Controller.

@@ -11,11 +11,14 @@ terraform {
     }
   }
 
+  # Natively supports workspaces. Terraform will save state files as:
+  # - env:/dev/notifications.tfstate
+  # - env:/prod/notifications.tfstate
   backend "azurerm" {
     resource_group_name  = "rg-aleph-tfstate"
-    storage_account_name = "stalephsprodtfstate"
+    storage_account_name = "stalephsdevtfstate"
     container_name       = "tfstate"
-    key                  = "prod.terraform.tfstate"
+    key                  = "notifications.tfstate"
   }
 }
 

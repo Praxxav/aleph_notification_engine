@@ -63,9 +63,6 @@ jobs:
   terraform-checks:
     name: Terraform Format & Validate
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        env: [dev, prod]
     
     steps:
       - name: Checkout Code
@@ -82,11 +79,11 @@ jobs:
 
       - name: Terraform Init
         run: terraform init -backend=false
-        working-directory: terraform/environments/${{ matrix.env }}
+        working-directory: terraform
 
       - name: Terraform Validate
         run: terraform validate
-        working-directory: terraform/environments/${{ matrix.env }}
+        working-directory: terraform
 
   # Job 3: Lint the Helm Chart
   helm-checks:

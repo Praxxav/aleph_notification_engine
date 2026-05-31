@@ -45,17 +45,22 @@ jobs:
       # 1. Provision / Sync Production Infrastructure via Terraform
       - name: Terraform Init
         run: terraform init
-        working-directory: terraform/environments/prod
+        working-directory: terraform
+
+      - name: Terraform Select Workspace
+        run: terraform workspace select prod || terraform workspace new prod
+        working-directory: terraform
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
-        working-directory: terraform/environments/prod
+        working-directory: terraform
 
       # 2. Extract Production Terraform Outputs dynamically
       - name: Extract Terraform Outputs
         id: tf_outputs
         run: |
-          cd terraform/environments/prod
+          cd terraform
+          terraform workspace select prod
           echo "ACR_SERVER=$(terraform output -raw acr_login_server)" >> $GITHUB_OUTPUT
           echo "KV_NAME=$(terraform output -raw key_vault_name)" >> $GITHUB_OUTPUT
           echo "QUEUE_URL=$(terraform output -raw queue_account_url)" >> $GITHUB_OUTPUT

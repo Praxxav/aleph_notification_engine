@@ -16,7 +16,7 @@ terraform {
   # - env:/prod/notifications.tfstate
   backend "azurerm" {
     resource_group_name  = "rg-aleph-tfstate"
-    storage_account_name = "stalephsdevtfstate"
+    storage_account_name = "praxavtfstate12345"
     container_name       = "tfstate"
     key                  = "notifications.tfstate"
   }

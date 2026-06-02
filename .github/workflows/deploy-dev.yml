@@ -89,6 +89,13 @@ jobs:
         run: |
           az aks get-credentials --resource-group ${{ steps.tf_outputs.outputs.RESOURCE_GROUP }} --name ${{ steps.tf_outputs.outputs.AKS_CLUSTER }} --overwrite-existing
 
+      # Automatically install KEDA on AKS (Unlocks the Event-Driven queue-depth scaling stretch goal)
+      - name: Install KEDA
+        run: |
+          helm repo add kedacore https://kedacore.github.io/charts
+          helm repo update
+          helm upgrade --install keda kedacore/keda --namespace keda --create-namespace
+
       - name: Helm Upgrade Rollout
         run: |
           helm upgrade --install notification-engine charts/notification-engine \

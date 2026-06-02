@@ -27,7 +27,8 @@ spec:
         - name: db-migrate
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["python", "-m", "app.migrations"]
+          command: ["python", "-m", "app.db_migrations"]
+          args: []
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           envFrom:

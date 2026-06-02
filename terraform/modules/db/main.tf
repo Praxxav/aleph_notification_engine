@@ -13,6 +13,7 @@ resource "azurerm_postgresql_flexible_server" "postgres" {
   private_dns_zone_id    = var.private_dns_zone_id
   administrator_login    = var.admin_username
   administrator_password = random_password.db_pass.result
+  public_network_access_enabled = false
   
   # Highly cost-effective tier for dev/test and lightweight prod workloads
   sku_name               = "B_Standard_B1ms"

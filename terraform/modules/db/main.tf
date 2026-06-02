@@ -16,7 +16,7 @@ resource "azurerm_postgresql_flexible_server" "postgres" {
   public_network_access_enabled = false
   
   # Highly cost-effective tier for dev/test and lightweight prod workloads
-  sku_name               = "Standard_B2s_v2"
+  sku_name               = "B_Standard_B1ms"
   storage_mb             = 32768
 
   # Disable high availability to optimize cost (can be enabled in production variables if required)

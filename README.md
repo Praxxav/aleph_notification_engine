@@ -195,7 +195,7 @@ To store Terraform state securely in Azure Blob Storage, we must bootstrap a Sto
 
 ```bash
 # Define unique names
-RG_NAME="rg-aleph-tfstate"
+RG_NAME="praxav"
 LOCATION="eastus2"
 STORAGE_DEV="stalephsdevtfstate"
 STORAGE_PROD="stalephsprodtfstate"

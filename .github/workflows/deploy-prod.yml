@@ -96,6 +96,8 @@ jobs:
           helm repo add kedacore https://kedacore.github.io/charts
           helm repo update
           helm upgrade --install keda kedacore/keda --namespace keda --create-namespace
+          echo "Waiting 15 seconds for KEDA API service to initialize..."
+          sleep 15
 
       - name: Helm Upgrade Rollout
         run: |
@@ -107,5 +109,4 @@ jobs:
             --set keyvault.tenantId=${{ secrets.AZURE_TENANT_ID }} \
             --set queue.accountUrl=${{ steps.tf_outputs.outputs.QUEUE_URL }} \
             --set api.managedIdentityClientId=${{ steps.tf_outputs.outputs.API_CLIENT_ID }} \
-            --set worker.managedIdentityClientId=${{ steps.tf_outputs.outputs.WORKER_CLIENT_ID }} \
-            --cleanup-on-fail
+            --set worker.managedIdentityClientId=${{ steps.tf_outputs.outputs.WORKER_CLIENT_ID }}

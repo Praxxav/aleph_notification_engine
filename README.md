@@ -37,6 +37,34 @@ graph TD
     CSI -.->|Sync K8s Secret| Worker
 ```
 
+### Multi-Environment Deployment & CI/CD Flow
+
+```mermaid
+graph TD
+    Developer[Developer] -->|Create PR to main| PR[PR Validation Workflow]
+    PR -->|Runs| Pytest[Pytest Suite with DB Service]
+    PR -->|Runs| TFLint[Terraform Format & Validate]
+    PR -->|Runs| HelmLint[Helm Lint]
+    
+    Developer -->|Merge PR to main| Merge[Dev Deployment Workflow]
+    Merge -->|Step 1| TFDev[Terraform Apply dev workspace]
+    TFDev -->|Step 2| ACRDev[Build & Push ACR: :latest & :sha]
+    ACRDev -->|Step 3| HelmDev[Helm Upgrade Dev Cluster]
+    
+    Developer -->|Push Tag v*.*.*| Tag[Prod Deployment Workflow]
+    Tag -->|Step 1| Gate{Manual Approval Gate}
+    Gate -->|Approved| TFProd[Terraform Apply prod workspace]
+    TFProd -->|Step 2| ACRProd[Build & Push ACR: :version]
+    ACRProd -->|Step 3| HelmProd[Helm Upgrade Prod Cluster]
+```
+
+The system implements a fully automated DevOps pipeline split into three stages:
+1. **Continuous Integration (PR Validation)**: On any Pull Request targeting `main`, GitHub Actions runs application tests against a PostgreSQL container, checks Terraform formatting/validity, and lints the Helm chart to ensure manifest syntax compliance.
+2. **Continuous Deployment to Dev**: Once a PR is merged into `main`, the Dev pipeline initializes and selects the `dev` Terraform workspace, applies infrastructure changes, builds the Docker image, tags it with the commit SHA, and rolls it out to the Dev AKS cluster using Helm.
+3. **Continuous Deployment to Prod**: When a release tag (`v*.*.*`) is pushed, the Production pipeline triggers. Deployment requires a manual approval gate configured in GitHub Environments. Once approved, it applies infrastructure changes using the `prod` Terraform workspace, builds/tags the image with the release version, and rolls it out to the Production AKS cluster.
+
+---
+
 ### Identity and Access Architecture (Zero-Credential Model)
 
 ```mermaid
@@ -166,7 +194,7 @@ pip install -r requirements.txt pytest
 ### Step 3: Run Database Migrations Locally
 ```bash
 # Executing our custom migrations script to set up tables
-python -m app.migrations
+python -m app.db_migrations
 ```
 
 ### Step 4: Run the API Process
@@ -311,3 +339,5 @@ To cut costs by 30% immediately:
 1. **Database Connection Pooling:** Currently uses a maximum of 5 connections per pod. At high API scale, this could exhaust PostgreSQL connections. Introducing a connection pooler like **PgBouncer** is a recommended production improvement.
 2. **Network Policies:** Currently, pod-to-pod communication is unrestricted. A next step is to apply Kubernetes NetworkPolicies ensuring ONLY the API pod can write to the queue, and ONLY the API and Worker can access the PostgreSQL Flexible Server.
 3. **Dead Letter Queue (DLQ):** Messages that fail repeatedly inside the background worker will retry indefinitely. We should configure a Dead Letter Queue on the Storage Queue to offload failing messages after 5 retries.
+4. **External Access Routing:** The application was successfully deployed and validated within the AKS cluster; however, external access through the Azure Load Balancer public IP requires additional Azure networking investigation, as internal service and ingress routing were verified to be functioning correctly.
+

@@ -10,7 +10,7 @@ locals {
       aks_subnet_prefix  = "10.10.0.0/20"
       db_subnet_prefix   = "10.10.16.0/24"
       node_count         = 2
-      vm_size            = "Standard_B2s"
+      vm_size            = "Standard_B2s_v2"
       k8s_namespace      = "default"
     }
     dev = {
@@ -19,7 +19,7 @@ locals {
       aks_subnet_prefix  = "10.10.0.0/20"
       db_subnet_prefix   = "10.10.16.0/24"
       node_count         = 2
-      vm_size            = "Standard_B2s"
+      vm_size            = "Standard_B2s_v2"
       k8s_namespace      = "default"
     }
     prod = {
@@ -28,7 +28,7 @@ locals {
       aks_subnet_prefix  = "10.20.0.0/20"
       db_subnet_prefix   = "10.20.16.0/24"
       node_count         = 3
-      vm_size            = "Standard_B4ms"
+      vm_size            = "Standard_B2s_v2"
       k8s_namespace      = "production" # Separate namespace for production pods
     }
   }
